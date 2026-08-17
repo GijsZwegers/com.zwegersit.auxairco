@@ -1,22 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" xml:space="preserve">
-<g fill="none" stroke="#000000" stroke-width="34" stroke-linecap="round" stroke-linejoin="round">
-  <!-- wall-mounted split-unit AC body, front-facing outline -->
-  <path d="M220,240 h520 a68,68 0 0 1 68,68 v68 a68,68 0 0 1 -68,68 H220 a68,68 0 0 1 -68,-68 V308 a68,68 0 0 1 68,-68 Z"/>
-  <!-- status dot -->
-  <circle cx="700" cy="308" r="14" fill="#000000" stroke="none"/>
-  <!-- vent slits -->
-  <line x1="244" y1="392" x2="244" y2="428"/>
-  <line x1="340" y1="392" x2="340" y2="428"/>
-  <line x1="436" y1="392" x2="436" y2="428"/>
-  <line x1="532" y1="392" x2="532" y2="428"/>
-  <line x1="628" y1="392" x2="628" y2="428"/>
-  <line x1="708" y1="392" x2="708" y2="428"/>
-  <!-- wind streaks, blowing straight down out of the unit -->
-  <path d="M270,470 C270,540 246,556 246,620 C246,652 262,660 262,684" stroke-width="28"/>
-  <path d="M375,470 C375,550 351,566 351,640 C351,676 367,684 367,712" stroke-width="28"/>
-  <path d="M480,470 C480,558 456,576 456,656 C456,694 472,702 472,732" stroke-width="28"/>
-  <path d="M585,470 C585,550 561,566 561,640 C561,676 577,684 577,712" stroke-width="28"/>
-  <path d="M690,470 C690,540 666,556 666,620 C666,652 682,660 682,684" stroke-width="28"/>
+<g fill="none" stroke="#000000" stroke-width="42" stroke-linecap="round" stroke-linejoin="round">
+  <!-- abstract airflow mark: three breeze streaks -->
+  <path d="M170,330 C340,330 340,410 510,410 C610,410 610,330 690,330"/>
+  <path d="M140,480 C340,480 340,560 560,560 C670,560 670,480 780,480"/>
+  <path d="M200,630 C360,630 360,710 500,710 C580,710 580,630 660,630"/>
 </g>
 </svg>
