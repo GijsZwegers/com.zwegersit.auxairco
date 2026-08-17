@@ -26,9 +26,6 @@ module.exports = class AircoDevice extends Homey.Device {
     });
 
     this.registerCapabilityListener('target_temperature', async (value: number) => {
-      // Halve graden bevestigd leesbaar (control byte12 bit7 = half-graad-vlag).
-      // Schrijven van een halve graad is nog niet los getest -- checken bij
-      // Fase 4 live-testen dat dit ook echt aankomt en niet afgerond wordt.
       const rounded = Math.round(value * 2) / 2;
       await this.sendIntent({ temperature: rounded });
     });
@@ -57,7 +54,7 @@ module.exports = class AircoDevice extends Homey.Device {
     try {
       await sendControl(this.bearer as string, id, intent);
     } catch (err) {
-      // Sessie kan verlopen zijn -- eenmalig opnieuw inloggen en herproberen.
+      // Session may have expired: log in again and retry once.
       await this.ensureLoggedIn();
       await sendControl(this.bearer as string, id, intent);
     }
@@ -85,16 +82,15 @@ module.exports = class AircoDevice extends Homey.Device {
     await this.safeSetCapabilityValue('target_temperature', state.targetTemperature);
     await this.safeSetCapabilityValue('aux_fan_speed', WIRE_FAN_TO_HOMEY[state.fanSpeedWire] ?? 'auto');
     await this.safeSetCapabilityValue('measure_temperature', parseAmbientTemperature(device.status.running));
-    // TODO (Fase 3): swing (state.swingActive) is wel uitleesbaar maar nog niet
-    // los per as (verticaal vs. horizontaal), dus nog geen Homey-capability
-    // voor. Zie CLOUD-PROTOCOL-NOTES.md voor de volledige geschiedenis.
+    // state.swingActive is readable but not yet split into vertical vs.
+    // horizontal, so there's no Homey capability for it yet.
   }
 
   private async safeSetCapabilityValue(capability: string, value: unknown): Promise<void> {
     try {
       await this.setCapabilityValue(capability, value as never);
     } catch (err) {
-      this.error(`Kon ${capability} niet bijwerken:`, err);
+      this.error(`Could not update ${capability}:`, err);
     }
   }
 

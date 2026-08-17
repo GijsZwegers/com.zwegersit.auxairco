@@ -1,6 +1,3 @@
-// TypeScript-poort van protocol-test/src/test-cloud.mjs -- zelfde,
-// bewezen-werkende logica, alleen getypeerd. Geen nieuw protocolwerk.
-
 import { createCipheriv, publicEncrypt, constants as cryptoConstants } from 'node:crypto';
 import {
   AUX_HOST,
@@ -23,22 +20,16 @@ export interface AuxDevice {
   };
 }
 
-// Laatst-gecommandeerde staat, uitgelezen uit status.control. Bevestigd
-// (2026-08-12) door los power/mode/temperature/fan/swing te wijzigen en de
-// resulterende hex te vergelijken -- zelfde bit-indeling als het oude lokale
-// Broadlink-protocol. Gemeten-temperatuur zit NIET hierin (zie
-// CLOUD-PROTOCOL-NOTES.md, apart nog niet gekraakt).
+// Last-commanded state, decoded from status.control, which shares its bit
+// layout with the older local Broadlink AC protocol. Does not include
+// ambient temperature (see parseAmbientTemperature below).
 export interface AuxControlState {
   onoff: boolean;
   mode: number;
   targetTemperature: number;
-  /** Wire-fanspeed (1=high,2=medium,3=low,4=turbo,5=auto) -- zie WIRE_FAN_TO_HOMEY. */
+  /** Wire-level fan speed (1=high, 2=medium, 3=low, 4=turbo, 5=auto) -- see WIRE_FAN_TO_HOMEY. */
   fanSpeedWire: number;
-  /**
-   * true als verticale óf horizontale swing actief is. Nog niet gelukt om de
-   * twee assen apart te herkennen (in alle metingen tot nu toe stonden ze
-   * altijd samen aan/uit) -- zie CLOUD-PROTOCOL-NOTES.md.
-   */
+  /** True if vertical OR horizontal swing is active; the two axes can't be told apart yet. */
   swingActive: boolean;
 }
 
@@ -54,19 +45,11 @@ export function parseControlState(controlHex: string): AuxControlState {
   };
 }
 
-// Gemeten (omgevings)temperatuur uit status.running, byte 15: `byte - 32`.
-// Bevestigd (2026-08-17) over 7 van de 8 verse "running"-verversingen uit een
-// gecontroleerde meetsessie, inclusief een schone geïsoleerde meting waarbij
-// ALLEEN de kamertemperatuur veranderde (24°C -> 20°C, verder identieke
-// modus/fan/swing/target) -- de byte daalde daarbij exact van 0x38 naar 0x34
-// (56 -> 52), precies de 4 graden verschil. Ook stabiel gebleken over
-// wisselende modus (cool/heat/uit), fan-snelheid (low/medium) en swing-status,
-// wat de eerdere `byte[16]-23`-gok (zie git-historie) juist deed stuklopen.
-// De ene afwijkende meting in de dataset was de allereerste van een sessie en
-// wijkt af zoals verwacht bij een net-nog-niet-bijgewerkte afgelezen waarde
-// (zelfde AC-app-vertraging die ook elders is waargenomen), niet een gebroken
-// formule. Alleen hele graden -- er is geen aanwijzing voor een halve-graad-
-// vlag zoals bij targetTemperature.
+// Ambient (room) temperature from status.running, byte 15: `byte - 32`,
+// whole degrees only. Confirmed against a controlled measurement session,
+// including an isolated case where only the room temperature changed (24°C
+// -> 20°C, mode/fan/swing/target held constant) and the byte dropped by
+// exactly 4.
 export function parseAmbientTemperature(runningHex: string): number {
   const bytes = runningHex.match(/../g)!.map((b) => parseInt(b, 16));
   return bytes[15] - 32;
@@ -116,10 +99,10 @@ async function request<T>(method: string, path: string, options: RequestOptions 
   try {
     json = JSON.parse(text);
   } catch {
-    throw new AuxApiError(`Kon antwoord van ${path} niet parsen (HTTP ${res.status}): ${text}`);
+    throw new AuxApiError(`Could not parse response from ${path} (HTTP ${res.status}): ${text}`);
   }
   if (json.code !== 200) {
-    throw new AuxApiError(`${path} gaf een foutcode: ${JSON.stringify(json)}`);
+    throw new AuxApiError(`${path} returned an error: ${JSON.stringify(json)}`);
   }
   return json.data as T;
 }
@@ -129,15 +112,13 @@ function derBase64ToPem(base64Der: string): string {
   return `-----BEGIN PUBLIC KEY-----\n${lines}\n-----END PUBLIC KEY-----\n`;
 }
 
-// "account" (e-mailadres): AES-128-ECB, vaste sleutel, PKCS7-padding.
 function encryptAccount(email: string): string {
   const cipher = createCipheriv('aes-128-ecb', ACCOUNT_AES_KEY, null);
   const encrypted = Buffer.concat([cipher.update(email, 'utf8'), cipher.final()]);
   return encrypted.toString('base64');
 }
 
-// "password": RSA/ECB/PKCS1Padding met de vers-opgehaalde publieke sleutel,
-// in blokken van 117 bytes (max. PKCS1-payload voor een 1024-bit sleutel).
+// Chunked into 117-byte blocks: the max PKCS1 payload for a 1024-bit key.
 function encryptPassword(pem: string, password: string): string {
   const bytes = Buffer.from(password, 'utf8');
   const chunks: Buffer[] = [];
