@@ -12,7 +12,7 @@
     "en": "AUX Airco"
   },
   "description": {
-    "en": "Control your AUX Freedom split-unit air conditioner: power, mode, target and measured room temperature, and fan speed, all through the AUX Cloud."
+    "en": "Freedom over your climate, automated"
   },
   "category": [
     "climate"
@@ -31,8 +31,7 @@
   "drivers": [
     {
       "name": {
-        "en": "AUX Airco",
-        "nl": "AUX Airco"
+        "en": "AUX Airco"
       },
       "class": "airconditioning",
       "capabilities": [
@@ -53,36 +52,31 @@
             {
               "id": "auto",
               "title": {
-                "en": "Auto",
-                "nl": "Auto"
+                "en": "Auto"
               }
             },
             {
               "id": "cool",
               "title": {
-                "en": "Cool",
-                "nl": "Koelen"
+                "en": "Cool"
               }
             },
             {
               "id": "dry",
               "title": {
-                "en": "Dry",
-                "nl": "Drogen"
+                "en": "Dry"
               }
             },
             {
               "id": "heat",
               "title": {
-                "en": "Heat",
-                "nl": "Verwarmen"
+                "en": "Heat"
               }
             },
             {
               "id": "fan",
               "title": {
-                "en": "Fan",
-                "nl": "Ventilator"
+                "en": "Fan"
               }
             }
           ]
@@ -104,15 +98,13 @@
           "template": "login_credentials",
           "options": {
             "usernameLabel": {
-              "en": "Email address",
-              "nl": "E-mailadres"
+              "en": "Email address"
             },
             "usernamePlaceholder": {
               "en": "you@example.com"
             },
             "passwordLabel": {
-              "en": "Password",
-              "nl": "Wachtwoord"
+              "en": "Password"
             }
           }
         },
@@ -135,8 +127,7 @@
     "aux_fan_speed": {
       "type": "enum",
       "title": {
-        "en": "Fan speed",
-        "nl": "Ventilatorsnelheid"
+        "en": "Fan speed"
       },
       "getable": true,
       "setable": true,
@@ -145,57 +136,49 @@
         {
           "id": "auto",
           "title": {
-            "en": "Auto",
-            "nl": "Auto"
+            "en": "Auto"
           }
         },
         {
           "id": "low",
           "title": {
-            "en": "Low",
-            "nl": "Laag"
+            "en": "Low"
           }
         },
         {
           "id": "medium_low",
           "title": {
-            "en": "Medium-low",
-            "nl": "Medium-laag"
+            "en": "Medium-low"
           }
         },
         {
           "id": "medium",
           "title": {
-            "en": "Medium",
-            "nl": "Medium"
+            "en": "Medium"
           }
         },
         {
           "id": "medium_high",
           "title": {
-            "en": "Medium-high",
-            "nl": "Medium-hoog"
+            "en": "Medium-high"
           }
         },
         {
           "id": "high",
           "title": {
-            "en": "High",
-            "nl": "Hoog"
+            "en": "High"
           }
         },
         {
           "id": "turbo",
           "title": {
-            "en": "Turbo",
-            "nl": "Turbo"
+            "en": "Turbo"
           }
         },
         {
           "id": "mute",
           "title": {
-            "en": "Mute",
-            "nl": "Stil"
+            "en": "Mute"
           }
         }
       ]

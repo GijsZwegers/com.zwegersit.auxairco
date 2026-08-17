@@ -1,7 +1,6 @@
 {
   "name": {
-    "en": "AUX Airco",
-    "nl": "AUX Airco"
+    "en": "AUX Airco"
   },
   "class": "airconditioning",
   "capabilities": [
@@ -19,11 +18,11 @@
     },
     "thermostat_mode": {
       "values": [
-        { "id": "auto", "title": { "en": "Auto", "nl": "Auto" } },
-        { "id": "cool", "title": { "en": "Cool", "nl": "Koelen" } },
-        { "id": "dry", "title": { "en": "Dry", "nl": "Drogen" } },
-        { "id": "heat", "title": { "en": "Heat", "nl": "Verwarmen" } },
-        { "id": "fan", "title": { "en": "Fan", "nl": "Ventilator" } }
+        { "id": "auto", "title": { "en": "Auto" } },
+        { "id": "cool", "title": { "en": "Cool" } },
+        { "id": "dry", "title": { "en": "Dry" } },
+        { "id": "heat", "title": { "en": "Heat" } },
+        { "id": "fan", "title": { "en": "Fan" } }
       ]
     }
   },
@@ -38,9 +37,9 @@
       "id": "login_credentials",
       "template": "login_credentials",
       "options": {
-        "usernameLabel": { "en": "Email address", "nl": "E-mailadres" },
+        "usernameLabel": { "en": "Email address" },
         "usernamePlaceholder": { "en": "you@example.com" },
-        "passwordLabel": { "en": "Password", "nl": "Wachtwoord" }
+        "passwordLabel": { "en": "Password" }
       }
     },
     {
