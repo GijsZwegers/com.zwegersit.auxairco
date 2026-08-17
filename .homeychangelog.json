@@ -1,5 +1,8 @@
 {
   "1.0.0": {
     "en": "First version!"
+  },
+  "1.0.1": {
+    "en": "Added measured room temperature. Refreshed the app and driver icons and images."
   }
 }
