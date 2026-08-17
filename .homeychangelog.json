@@ -4,5 +4,8 @@
   },
   "1.0.1": {
     "en": "Added measured room temperature. Refreshed the app and driver icons and images."
+  },
+  "1.0.2": {
+    "en": "Added account instructions on login page for adding homey account"
   }
 }
