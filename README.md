@@ -38,14 +38,22 @@ things aren't fully solved yet:
   app) with an **email address set** — phone-only accounts can't log in here.
   Add an email via the AC Freedom/AUX Home app first if needed.
 
+**Tip: use a dedicated or shared account for Homey, not the one on your
+personal phone.** Logging into the AC Freedom/AUX Home app invalidates the
+previous session for that account. One account is all Homey needs to both
+read status and send commands, so a household/shared login works great —
+just be aware that if a phone is *actively* using that same account at the
+same time, Homey will need to silently re-authenticate more often, causing
+brief delays. A login used mainly (or only) by Homey avoids that entirely.
+
 ## Adding a device
 
 1. Add a device, choose **AUX Airco**.
 2. Enter your AUX Cloud email and password.
 3. Select your air conditioner from the list.
 
-Note: logging into the AC Freedom/AUX Home app on your phone can invalidate
-other active sessions. If Homey loses its connection, it will automatically
+Note: logging into the AC Freedom/AUX Home app on a phone can invalidate
+Homey's active session. If Homey loses its connection, it will automatically
 log in again.
 
 ## Credits & how this works
