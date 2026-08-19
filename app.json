@@ -28,6 +28,29 @@
     "name": "Gijs Zwegers",
     "email": "gijszwegers@gmail.com"
   },
+  "tags": {
+    "en": [
+      "aux",
+      "air conditioning",
+      "climate control",
+      "cooling",
+      "smart home"
+    ]
+  },
+  "bugs": {
+    "url": "https://github.com/GijsZwegers/com.zwegersit.auxairco/issues"
+  },
+  "homepage": "https://github.com/GijsZwegers/com.zwegersit.auxairco",
+  "support": "https://community.homey.app/t/aux-airco-control-with-homey/66666",
+  "source": "https://github.com/GijsZwegers/com.zwegersit.auxairco",
+  "homeyCommunityTopicId": 66666,
+  "contributing": {
+    "donate": {
+      "paypal": {
+        "username": "GijsZwegers"
+      }
+    }
+  },
   "drivers": [
     {
       "name": {
