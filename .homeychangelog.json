@@ -7,5 +7,8 @@
   },
   "1.0.2": {
     "en": "Added account instructions on login page for adding homey account"
+  },
+  "1.0.3": {
+    "en": "New app icon and driver/app images. Filled in app store metadata (tags, links, donate). Session token is now persisted across restarts."
   }
 }

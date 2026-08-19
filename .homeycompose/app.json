@@ -1,6 +1,6 @@
 {
   "id": "com.zwegersit.auxairco",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "runtime": "nodejs",
@@ -28,7 +28,13 @@
     "email": "gijszwegers@gmail.com"
   },
   "tags": {
-    "en": ["aux", "air conditioning", "climate control", "cooling", "smart home"]
+    "en": [
+      "aux",
+      "air conditioning",
+      "climate control",
+      "cooling",
+      "smart home"
+    ]
   },
   "bugs": {
     "url": "https://github.com/GijsZwegers/com.zwegersit.auxairco/issues"
