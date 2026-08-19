@@ -15,7 +15,8 @@ module.exports = class AircoDevice extends Homey.Device {
   private pollInterval: NodeJS.Timeout | null = null;
 
   async onInit() {
-    await this.ensureLoggedIn();
+    this.bearer = (this.getStoreValue('bearer') as string | null) ?? null;
+    if (!this.bearer) await this.ensureLoggedIn();
 
     this.registerCapabilityListener('onoff', async (value: boolean) => {
       await this.sendIntent({ on_off: value ? 1 : 0 });
@@ -42,10 +43,14 @@ module.exports = class AircoDevice extends Homey.Device {
     if (this.pollInterval) this.homey.clearInterval(this.pollInterval);
   }
 
+  // AUX's login response only returns a single session token, no separate
+  // refresh token (confirmed against the live API) -- there is nothing else
+  // to persist here.
   private async ensureLoggedIn(): Promise<void> {
     const { email, password } = this.getStore();
     const result = await login(email, password);
     this.bearer = result.token;
+    await this.setStoreValue('bearer', result.token);
   }
 
   private async sendIntent(intent: Record<string, number>): Promise<void> {
