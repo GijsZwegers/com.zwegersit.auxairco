@@ -22,7 +22,6 @@ import {
   LEGACY_SPOOF_USER_AGENT,
   LEGACY_SPOOF_SYSTEM,
   LEGACY_SPOOF_APP_PLATFORM,
-  LEGACY_AC_PARAMS,
   LEGACY_AC_SPECIAL_PARAMS,
   isLegacyAcProduct,
   type LegacyRegion,
@@ -304,7 +303,12 @@ export async function listDevices(session: LegacyAuxLoginResult, region: LegacyR
     for (const device of devices) {
       const params: Record<string, number> = {};
       try {
-        Object.assign(params, await actOnDeviceParams(session, region, device, 'get', LEGACY_AC_PARAMS, []));
+        // Empty params list -- the backend returns its default param set
+        // for the device. Confirmed against fparrav's actual usage
+        // (refreshDeviceParams / the base fetch in fetchDevicesForFamily
+        // both call this with `[]`, not the full AC_PARAMS list -- that
+        // constant exists in the reference repo but is otherwise unused).
+        Object.assign(params, await actOnDeviceParams(session, region, device, 'get', [], []));
       } catch {
         // Leave whatever params we already have; a single failed device
         // shouldn't take down the whole list.
