@@ -65,17 +65,18 @@ export class AuxApiError extends Error {}
 
 interface RequestOptions {
   bearer?: string;
+  country?: string;
   query?: Record<string, string>;
   body?: unknown;
 }
 
-function baseHeaders(bearer: string): Record<string, string> {
+function baseHeaders(bearer: string, country: string): Record<string, string> {
   return {
     Accept: '*/*',
     'Accept-Language': 'en-US',
     aid: '1',
     os: '2',
-    country: AUX_COUNTRY,
+    country,
     'User-Agent': AUX_USER_AGENT,
     Authorization: `bearer ${bearer}`,
   };
@@ -86,7 +87,7 @@ async function request<T>(method: string, path: string, options: RequestOptions 
   if (options.query) {
     for (const [k, v] of Object.entries(options.query)) url.searchParams.set(k, v);
   }
-  const headers = baseHeaders(options.bearer ?? STATIC_APP_TOKEN);
+  const headers = baseHeaders(options.bearer ?? STATIC_APP_TOKEN, options.country ?? AUX_COUNTRY);
   let payload: string | undefined;
   if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json';
@@ -129,12 +130,12 @@ function encryptPassword(pem: string, password: string): string {
   return Buffer.concat(chunks).toString('base64');
 }
 
-async function getPubKeyBase64(): Promise<string> {
-  return request<string>('GET', '/app/auth/getPubkey');
+async function getPubKeyBase64(country: string): Promise<string> {
+  return request<string>('GET', '/app/auth/getPubkey', { country });
 }
 
-export async function login(email: string, password: string): Promise<AuxLoginResult> {
-  const pubkeyBase64 = await getPubKeyBase64();
+export async function login(email: string, password: string, country: string = AUX_COUNTRY): Promise<AuxLoginResult> {
+  const pubkeyBase64 = await getPubKeyBase64(country);
   const pem = derBase64ToPem(pubkeyBase64);
   const account = encryptAccount(email);
   const encryptedPassword = encryptPassword(pem, password);
@@ -144,6 +145,7 @@ export async function login(email: string, password: string): Promise<AuxLoginRe
     token: { token: string };
     appUser: { uid: string; nickName: string };
   }>('POST', '/app/auth/login/pwd', {
+    country,
     body: { password: encryptedPassword, account, ts, publicKeyBase64: pubkeyBase64 },
   });
 
@@ -154,8 +156,8 @@ export async function login(email: string, password: string): Promise<AuxLoginRe
   };
 }
 
-export async function listDevices(bearer: string): Promise<AuxDevice[]> {
-  return request<AuxDevice[]>('GET', '/app/user_device', { bearer, query: { getStatus: '1' } });
+export async function listDevices(bearer: string, country: string = AUX_COUNTRY): Promise<AuxDevice[]> {
+  return request<AuxDevice[]>('GET', '/app/user_device', { bearer, country, query: { getStatus: '1' } });
 }
 
 export async function sendControl(
@@ -163,6 +165,7 @@ export async function sendControl(
   deviceId: string,
   intent: Record<string, number>,
   dst = 1,
+  country: string = AUX_COUNTRY,
 ): Promise<void> {
-  await request('POST', '/app/device/v2/control', { bearer, body: { intent, dst, deviceId } });
+  await request('POST', '/app/device/v2/control', { bearer, country, body: { intent, dst, deviceId } });
 }

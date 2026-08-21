@@ -14,6 +14,9 @@ that's been asking for one since 2022.
 - **Measured room temperature** (whole degrees)
 - **Fan speed**: auto, low, medium-low, medium, medium-high, high, turbo, mute
 - Live status polling (every 60s) keeps Homey in sync with the AC
+- Automatically falls back to AUX's older Broadlink-hosted cloud backend at
+  pairing time for accounts/units that don't exist on the newer one — no
+  need to know in advance which backend your account is on
 
 ## Known limitations
 
@@ -30,6 +33,10 @@ things aren't fully solved yet:
 - **Local (LAN) control isn't supported.** Some older AUX Wi-Fi modules speak
   a local Broadlink-style protocol; this specific unit doesn't respond to it,
   so this app is cloud-only.
+- The legacy-backend fallback (see Features) is untested against a real
+  account on that backend — it was built from a public reference
+  implementation, not verified end-to-end. If pairing fails on a unit that
+  works fine in the official app, please open an issue.
 
 ## Requirements
 
@@ -60,14 +67,20 @@ log in again.
 
 The cloud protocol (login encryption, device list, control commands) was
 reverse-engineered from scratch via network capture and by decompiling the
-AUX Home Android app — full write-up and protocol notes in this project's
-`protocol-test/` folder for anyone continuing this work. The status byte
-layout turned out to share its structure with the older local Broadlink AC
-protocol, so credit to the prior reverse-engineering work that made that
-layout recognizable:
+AUX Home and AC Freedom Android apps — full write-up and protocol notes in
+this project's `protocol-test/` folder for anyone continuing this work. The
+status byte layout on the current backend turned out to share its structure
+with the older local Broadlink AC protocol, so credit to the prior
+reverse-engineering work that made that layout recognizable:
 
 - [makleso6/broadlink-aircon-api](https://github.com/makleso6/broadlink-aircon-api) (Apache-2.0)
 - [liaan/broadlink_ac_mqtt](https://github.com/liaan/broadlink_ac_mqtt)
+
+The legacy-backend fallback (`lib/auxcloud/legacyClient.ts`,
+`legacyConstants.ts`) is a direct TypeScript port of the login/device/control
+logic from these two MIT-licensed projects, which target that older backend
+natively:
+
 - [fparrav/homebridge-aux-cloud](https://github.com/fparrav/homebridge-aux-cloud) (MIT)
 - [maeek/ha-aux-cloud](https://github.com/maeek/ha-aux-cloud) (MIT)
 
