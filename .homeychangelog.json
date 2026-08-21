@@ -10,5 +10,8 @@
   },
   "1.0.3": {
     "en": "New app icon and driver/app images. Filled in app store metadata (tags, links, donate). Session token is now persisted across restarts."
+  },
+  "1.1.0": {
+    "en": "Added a fallback to AUX's older cloud backend for accounts/units that don't work on the current one, and fixed the login region to match your own account instead of assuming the Netherlands. The old-backend fallback is new and not yet confirmed working on real hardware — if pairing still fails, please open an issue."
   }
 }
