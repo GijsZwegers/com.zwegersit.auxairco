@@ -19,5 +19,9 @@
   },
   "1.2.0": {
     "en": "Added Flow cards for fan speed: trigger when it changes, condition to check it, and action to set it."
+  },
+  "1.2.1": {
+    "en": "Fixed repeated failed logins. Added clear error messages, account repair and guest account instructions.",
+    "nl": "Herhaalde mislukte inlogpogingen opgelost. Duidelijke foutmeldingen, opnieuw aanmelden en uitleg over gastaccounts toegevoegd."
   }
 }
