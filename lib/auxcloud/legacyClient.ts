@@ -9,6 +9,7 @@
 // of a bearer token.
 
 import { createCipheriv, createHash } from 'node:crypto';
+import { CloudApiError } from './errors';
 import {
   LEGACY_REGION_URLS,
   LEGACY_TIMESTAMP_TOKEN_ENCRYPT_KEY,
@@ -27,7 +28,7 @@ import {
   type LegacyRegion,
 } from './legacyConstants';
 
-export class LegacyAuxApiError extends Error {}
+export class LegacyAuxApiError extends CloudApiError {}
 
 export interface LegacyAuxLoginResult {
   loginsession: string;
@@ -90,18 +91,26 @@ async function request<T>(
   path: string,
   options: { headers: Record<string, string>; body?: unknown; rawBody?: Buffer; query?: Record<string, string> },
 ): Promise<T> {
-  const url = new URL(LEGACY_REGION_URLS[region] + '/' + path.replace(/^\//, ''));
+  const url = new URL(`${LEGACY_REGION_URLS[region]}/${path.replace(/^\//, '')}`);
   if (options.query) {
     for (const [k, v] of Object.entries(options.query)) url.searchParams.set(k, v);
   }
   const body = options.rawBody ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined);
-  const res = await fetch(url, { method: 'POST', headers: options.headers, body });
+  const res = await fetch(url, {
+    method: 'POST', headers: options.headers, body, signal: AbortSignal.timeout(30000),
+  });
   const text = await res.text();
   let json: any;
   try {
     json = JSON.parse(text);
   } catch {
-    throw new LegacyAuxApiError(`Could not parse legacy response from ${path} (HTTP ${res.status}): ${text}`);
+    throw new LegacyAuxApiError(`Could not parse legacy response from ${path} (HTTP ${res.status})`, undefined, path, res.status);
+  }
+  const status = json.status ?? (json.event?.header?.name === 'ErrorResponse' ? json.event.payload?.status : undefined);
+  if (!res.ok || (status !== undefined && Number(status) !== 0)) {
+    throw new LegacyAuxApiError(`Legacy ${path} failed (code ${status}, HTTP ${res.status})`,
+      status === undefined ? undefined : Number(status), path, res.status,
+      String(json.msg ?? json.message ?? json.event?.payload?.message ?? ''));
   }
   return json as T;
 }

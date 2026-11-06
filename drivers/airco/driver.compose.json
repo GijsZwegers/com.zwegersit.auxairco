@@ -34,22 +34,47 @@
   },
   "pair": [
     {
+      "id": "account",
+      "navigation": { "next": "login_credentials" }
+    },
+    {
       "id": "login_credentials",
       "template": "login_credentials",
       "options": {
-        "usernameLabel": { "en": "Email address" },
+        "title": { "en": "AUX guest account", "nl": "AUX-gastaccount" },
+        "usernameLabel": { "en": "Email address", "nl": "E-mailadres" },
         "usernamePlaceholder": { "en": "you@example.com" },
-        "passwordLabel": { "en": "Password" }
+        "passwordLabel": { "en": "Password", "nl": "Wachtwoord" }
       }
     },
     {
       "id": "list_devices",
       "template": "list_devices",
-      "navigation": { "next": "add_devices" }
+      "navigation": { "prev": "login_credentials", "next": "add_devices" }
     },
     {
       "id": "add_devices",
       "template": "add_devices"
+    }
+  ],
+  "repair": [
+    {
+      "id": "account",
+      "navigation": { "next": "login_credentials" }
+    },
+    {
+      "id": "login_credentials",
+      "template": "login_credentials",
+      "options": {
+        "title": { "en": "Sign in to your AUX guest account", "nl": "Aanmelden met je AUX-gastaccount" },
+        "usernameLabel": { "en": "Email address", "nl": "E-mailadres" },
+        "usernamePlaceholder": { "en": "you@example.com" },
+        "passwordLabel": { "en": "Password", "nl": "Wachtwoord" }
+      }
+    },
+    {
+      "id": "done",
+      "template": "done"
     }
   ]
 }

@@ -1,5 +1,10 @@
 import Homey from 'homey';
-import { login, sendControl, listDevices, parseControlState, parseAmbientTemperature } from '../../lib/auxcloud/client';
+import {
+  sendControl, listDevices, parseControlState, parseAmbientTemperature, AuxLoginResult,
+} from '../../lib/auxcloud/client';
+import {
+  getAuthManager, AuthPausedError, Credentials, CloudSession,
+} from '../../lib/auxcloud/auth';
 import {
   HOMEY_MODE_TO_AUX,
   AUX_MODE_TO_HOMEY,
@@ -8,7 +13,6 @@ import {
   getCountryFromTimezone,
 } from '../../lib/auxcloud/constants';
 import {
-  login as legacyLogin,
   listDevices as legacyListDevices,
   setParam as legacySetParam,
   LegacyAuxLoginResult,
@@ -24,13 +28,15 @@ import {
 
 const POLL_INTERVAL_MS = 60 * 1000;
 
-module.exports = class AircoDevice extends Homey.Device {
+class AircoDevice extends Homey.Device {
 
-  private bearer: string | null = null;
   private country: string = 'NLD';
-  private legacySession: LegacyAuxLoginResult | null = null;
   private legacyDevice: LegacyAuxDevice | null = null;
   private pollInterval: NodeJS.Timeout | null = null;
+  private pollTask: Promise<void> | null = null;
+  private commands = new Set<Promise<void>>();
+  private repairing = false;
+  private unavailableReason: string | null = null;
   private destroyed = false;
 
   private get isLegacy(): boolean {
@@ -38,9 +44,7 @@ module.exports = class AircoDevice extends Homey.Device {
   }
 
   async onInit() {
-    if (this.isLegacy) {
-      await this.ensureLegacyLoggedIn();
-    } else {
+    if (!this.isLegacy) {
       // Devices paired before country-detection existed have no stored
       // value -- resolve it once from the Homey's own timezone and persist
       // it so it doesn't need to be re-derived on every restart.
@@ -51,10 +55,13 @@ module.exports = class AircoDevice extends Homey.Device {
         await this.setStoreValue('country', country);
       }
       this.country = country;
-
-      this.bearer = (this.getStoreValue('bearer') as string | null) ?? null;
-      if (!this.bearer) await this.ensureLoggedIn();
     }
+
+    const credentials = this.getCredentials();
+    const bearer = this.getStoreValue('bearer') as string | null;
+    const legacySession = this.getStoreValue('legacySession') as LegacyAuxLoginResult | null;
+    if (this.isLegacy && legacySession) getAuthManager(this.homey).seed(credentials, legacySession);
+    if (!this.isLegacy && bearer) getAuthManager(this.homey).seed(credentials, { token: bearer, uid: '', nickName: '' });
 
     this.registerCapabilityListener('onoff', async (value: boolean) => {
       await this.sendIntent({ new: { on_off: value ? 1 : 0 }, legacy: { pwr: value ? 1 : 0 } });
@@ -91,91 +98,155 @@ module.exports = class AircoDevice extends Homey.Device {
     if (this.pollInterval) this.homey.clearInterval(this.pollInterval);
   }
 
-  // AUX's login response only returns a single session token, no separate
-  // refresh token (confirmed against the live API) -- there is nothing else
-  // to persist here.
-  private async ensureLoggedIn(): Promise<void> {
-    const { email, password } = this.getStore();
-    const result = await login(email, password, this.country);
-    this.bearer = result.token;
-    await this.setStoreValue('bearer', result.token);
+  getCredentials(): Credentials {
+    const { email, password, region } = this.getStore();
+    return {
+      email, password, region, country: this.country, protocol: this.isLegacy ? 'legacy' : 'new',
+    };
   }
 
-  private async ensureLegacyLoggedIn(): Promise<void> {
-    const { email, password, region } = this.getStore();
-    this.legacySession = await legacyLogin(email, password, region as LegacyRegion);
+  private async withSession<T>(action: (session: CloudSession) => Promise<T>): Promise<T> {
+    const credentials = this.getCredentials();
+    return getAuthManager(this.homey).run(credentials, async (session) => {
+      const result = await action(session);
+      await this.saveSession(session);
+      return result;
+    });
+  }
+
+  private async saveSession(session: CloudSession): Promise<void> {
+    if ('token' in session) {
+      if (this.getStoreValue('bearer') !== session.token) await this.setStoreValue('bearer', session.token);
+    } else if ((this.getStoreValue('legacySession') as LegacyAuxLoginResult | null)?.loginsession !== session.loginsession) {
+      await this.setStoreValue('legacySession', session);
+    }
+  }
+
+  async repairCredentials(email: string, password: string): Promise<void> {
+    this.repairing = true;
+    try {
+      await this.pollTask;
+      await Promise.allSettled([...this.commands]);
+      const credentials = { ...this.getCredentials(), email: email.trim(), password };
+      const auth = getAuthManager(this.homey);
+      let session = await auth.authenticate(credentials, true);
+      const devices = await auth.run(credentials, async (verifiedSession) => {
+        session = verifiedSession;
+        return this.isLegacy
+          ? legacyListDevices(session as LegacyAuxLoginResult, credentials.region as LegacyRegion)
+          : listDevices((session as AuxLoginResult).token, credentials.country);
+      });
+      const found = devices.some((device) => ('deviceId' in device ? device.deviceId : device.endpointId) === this.getData().id);
+      if (!found) throw new Error(this.homey.__('auth.device_not_shared'));
+      await this.applyCredentials(credentials, session);
+    } finally {
+      this.repairing = false;
+    }
+  }
+
+  async applyCredentials(credentials: Credentials, session?: CloudSession): Promise<void> {
+    this.repairing = true;
+    try {
+      await this.pollTask;
+      await Promise.allSettled([...this.commands]);
+      await this.setStoreValue('email', credentials.email);
+      await this.setStoreValue('password', credentials.password);
+      this.legacyDevice = null;
+      const authenticated = session ?? await getAuthManager(this.homey).authenticate(credentials);
+      await this.saveSession(authenticated);
+      this.unavailableReason = null;
+      await this.setAvailable();
+    } finally {
+      this.repairing = false;
+    }
+  }
+
+  private async handleError(error: unknown): Promise<void> {
+    if (this.destroyed) return;
+    const message = error instanceof AuthPausedError ? error.message : this.homey.__('auth.unreachable');
+    if (message !== this.unavailableReason) {
+      this.unavailableReason = message;
+      await this.setUnavailable(message);
+    }
+    if (error instanceof AuthPausedError) {
+      await getAuthManager(this.homey).notifyOnce(this.getCredentials(), message).catch((err: unknown) => this.error('Could not notify about login problem:', err));
+    } else {
+      this.error('Cloud request failed; will retry on the next poll:', error);
+    }
   }
 
   private async sendIntent(intent: { new: Record<string, number>; legacy: Record<string, number> }): Promise<void> {
-    if (this.isLegacy) {
-      await this.sendLegacyIntent(intent.legacy);
-    } else {
-      await this.sendNewIntent(intent.new);
+    if (this.repairing) throw new Error(this.homey.__('auth.repairing'));
+    const task = (async () => {
+      try {
+        if (this.isLegacy) {
+          await this.sendLegacyIntent(intent.legacy);
+        } else {
+          await this.sendNewIntent(intent.new);
+        }
+      } catch (error) {
+        await this.handleError(error);
+        throw error;
+      }
+    })();
+    this.commands.add(task);
+    try {
+      await task;
+    } finally {
+      this.commands.delete(task);
     }
   }
 
   private async sendNewIntent(intent: Record<string, number>): Promise<void> {
     const { id } = this.getData();
-    if (!this.bearer) await this.ensureLoggedIn();
-    try {
-      await sendControl(this.bearer as string, id, intent, 1, this.country);
-    } catch (err) {
-      // Session may have expired: log in again and retry once.
-      await this.ensureLoggedIn();
-      await sendControl(this.bearer as string, id, intent, 1, this.country);
-    }
+    await this.withSession((session) => sendControl((session as AuxLoginResult).token, id, intent, 1, this.country));
   }
 
   private async sendLegacyIntent(intent: Record<string, number>): Promise<void> {
-    if (!this.legacySession) await this.ensureLegacyLoggedIn();
     if (!this.legacyDevice) await this.pollLegacyState();
     if (!this.legacyDevice) throw new Error('Device not found on the legacy AUX Cloud backend.');
 
     const [param, value] = Object.entries(intent)[0];
     const region = this.getStore().region as LegacyRegion;
-    const runOnce = () => legacySetParam(this.legacySession as LegacyAuxLoginResult, region, this.legacyDevice as LegacyAuxDevice, param, value);
-    try {
-      await runOnce();
-    } catch (err) {
-      // Session may have expired: log in again and retry once.
-      await this.ensureLegacyLoggedIn();
-      await runOnce();
-    }
+    await this.withSession((session) => legacySetParam(session as LegacyAuxLoginResult, region, this.legacyDevice as LegacyAuxDevice, param, value));
   }
 
-  // Runs unattended on a timer, so it must never throw -- an uncaught
-  // rejection here would otherwise surface as a device error for things
-  // that are routinely transient (a session that expired between the retry
-  // attempt, AUX's own server hiccuping, a network blip, or the device
-  // having been deleted from Homey while a poll was already in flight).
-  // Log and let the next scheduled poll try again instead.
+  // Polls never overlap or reject from the unattended timer.
   private async pollState(): Promise<void> {
-    if (this.destroyed) return;
-    try {
-      if (this.isLegacy) {
-        await this.pollLegacyState();
-      } else {
-        await this.pollNewState();
+    if (this.destroyed || this.repairing) return;
+    if (this.pollTask) {
+      await this.pollTask;
+      return;
+    }
+    this.pollTask = (async () => {
+      try {
+        if (this.isLegacy) {
+          await this.pollLegacyState();
+        } else {
+          await this.pollNewState();
+        }
+        if (!this.destroyed) {
+          getAuthManager(this.homey).assertAllowed(this.getCredentials());
+          await this.setAvailable();
+          this.unavailableReason = null;
+        }
+      } catch (err) {
+        await this.handleError(err);
       }
-    } catch (err) {
-      if (!this.destroyed) this.error('Poll failed, will retry next cycle:', err);
+    })().catch((err: unknown) => this.error('Could not update device availability:', err));
+    try {
+      await this.pollTask;
+    } finally {
+      this.pollTask = null;
     }
   }
 
   private async pollNewState(): Promise<void> {
     const { id } = this.getData();
-    if (!this.bearer) await this.ensureLoggedIn();
-
-    let devices;
-    try {
-      devices = await listDevices(this.bearer as string, this.country);
-    } catch (err) {
-      await this.ensureLoggedIn();
-      devices = await listDevices(this.bearer as string, this.country);
-    }
+    const devices = await this.withSession((session) => listDevices((session as AuxLoginResult).token, this.country));
 
     const device = devices.find((d) => d.deviceId === id);
-    if (!device) return;
+    if (!device) throw new Error(this.homey.__('auth.device_not_shared'));
 
     const state = parseControlState(device.status.control);
 
@@ -191,18 +262,10 @@ module.exports = class AircoDevice extends Homey.Device {
   private async pollLegacyState(): Promise<void> {
     const { id } = this.getData();
     const region = this.getStore().region as LegacyRegion;
-    if (!this.legacySession) await this.ensureLegacyLoggedIn();
-
-    let devices;
-    try {
-      devices = await legacyListDevices(this.legacySession as LegacyAuxLoginResult, region);
-    } catch (err) {
-      await this.ensureLegacyLoggedIn();
-      devices = await legacyListDevices(this.legacySession as LegacyAuxLoginResult, region);
-    }
+    const devices = await this.withSession((session) => legacyListDevices(session as LegacyAuxLoginResult, region));
 
     const device = devices.find((d) => d.endpointId === id);
-    if (!device) return;
+    if (!device) throw new Error(this.homey.__('auth.device_not_shared'));
     this.legacyDevice = device;
 
     const p = device.params;
@@ -237,4 +300,6 @@ module.exports = class AircoDevice extends Homey.Device {
     }
   }
 
-};
+}
+
+export = AircoDevice;

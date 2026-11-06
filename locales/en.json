@@ -1,1 +1,21 @@
-{}
+{
+  "auth": {
+    "invalid_credentials": "AUX rejected the email address or password. Automatic login has stopped. Check your AUX account and use Repair in this device's settings to sign in again. Use a separate AUX guest account for Homey when also using AC Freedom/AUX Home.",
+    "locked": "AUX has temporarily locked this account. Automatic login has stopped. Wait at least 10 minutes without login attempts, then use Repair in this device's settings to sign in again. Use a separate AUX guest account for Homey when also using the phone app.",
+    "lock_warning": "AUX warns that further failed logins may lock this account. Automatic login has stopped. Wait at least 10 minutes without login attempts, check your credentials, then use Repair. Use a separate AUX guest account for Homey when also using the phone app.",
+    "login_failed": "Automatic login is paused after an AUX login problem. Check your account, then use Repair in this device's settings to sign in again. Use a separate AUX guest account for Homey when also using AC Freedom/AUX Home.",
+    "enter_credentials": "Enter the email address and password of your AUX account.",
+    "device_not_shared": "This air conditioner is not visible to this AUX account. Share it with your AUX guest account in AC Freedom/AUX Home, accept the invitation if required, and try again. Your saved device has not been replaced.",
+    "no_devices": "No air conditioners were found. First set up your air conditioner in AC Freedom/AUX Home and share it with your AUX guest account. Older models and cloud accounts may not be compatible.",
+    "unreachable": "The AUX cloud could not be reached or the air conditioner could not be read. Homey will retry automatically.",
+    "repairing": "Signing in again. Please wait until repair is complete."
+  },
+  "account": {
+    "title": "Before signing in",
+    "compatibility": "Your air conditioner must already work in AC Freedom or AUX Home. Tested with one AUX Freedom 5.0 kW unit; other models and older accounts may not work. Internet access is required.",
+    "guest_title": "Use a separate AUX guest account",
+    "guest": "To use Homey and the phone app together, create a second AUX account with its own email address and password. Share your air conditioner with it in AC Freedom/AUX Home and accept the invitation if required. Check that the guest can see the air conditioner.",
+    "signin": "Sign into Homey with the AUX guest account. Keep your main account in the phone app: using the same account in both can disconnect Homey. This is an AUX account, not a Homey guest user.",
+    "repair": "Already added this air conditioner? Signing in through Repair keeps your device and Flows. After an account lockout or warning, wait at least 10 minutes without login attempts before continuing."
+  }
+}

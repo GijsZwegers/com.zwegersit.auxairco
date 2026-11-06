@@ -1,4 +1,5 @@
 import { createCipheriv, publicEncrypt, constants as cryptoConstants } from 'node:crypto';
+import { CloudApiError } from './errors';
 import {
   AUX_HOST,
   AUX_COUNTRY,
@@ -61,7 +62,7 @@ export interface AuxLoginResult {
   nickName: string;
 }
 
-export class AuxApiError extends Error {}
+export class AuxApiError extends CloudApiError {}
 
 interface RequestOptions {
   bearer?: string;
@@ -94,16 +95,18 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     payload = JSON.stringify(options.body);
   }
 
-  const res = await fetch(url, { method, headers, body: payload });
+  const res = await fetch(url, {
+    method, headers, body: payload, signal: AbortSignal.timeout(30000),
+  });
   const text = await res.text();
   let json: any;
   try {
     json = JSON.parse(text);
   } catch {
-    throw new AuxApiError(`Could not parse response from ${path} (HTTP ${res.status}): ${text}`);
+    throw new AuxApiError(`Could not parse response from ${path} (HTTP ${res.status})`, undefined, path, res.status);
   }
-  if (json.code !== 200) {
-    throw new AuxApiError(`${path} returned an error: ${JSON.stringify(json)}`);
+  if (!res.ok || Number(json.code) !== 200) {
+    throw new AuxApiError(`${path} failed (code ${json.code}, HTTP ${res.status})`, Number(json.code), path, res.status, String(json.message ?? ''));
   }
   return json.data as T;
 }
@@ -146,7 +149,9 @@ export async function login(email: string, password: string, country: string = A
     appUser: { uid: string; nickName: string };
   }>('POST', '/app/auth/login/pwd', {
     country,
-    body: { password: encryptedPassword, account, ts, publicKeyBase64: pubkeyBase64 },
+    body: {
+      password: encryptedPassword, account, ts, publicKeyBase64: pubkeyBase64,
+    },
   });
 
   return {

@@ -1,0 +1,21 @@
+{
+  "auth": {
+    "invalid_credentials": "AUX weigert het e-mailadres of wachtwoord. Automatisch inloggen is gestopt. Controleer je AUX-account en meld je opnieuw aan via Repareren in de apparaatinstellingen. Gebruik een apart AUX-gastaccount voor Homey als je ook AC Freedom/AUX Home gebruikt.",
+    "locked": "AUX heeft dit account tijdelijk geblokkeerd. Automatisch inloggen is gestopt. Wacht minstens 10 minuten zonder inlogpogingen en meld je daarna opnieuw aan via Repareren in de apparaatinstellingen. Gebruik een apart AUX-gastaccount voor Homey als je ook de telefoonapp gebruikt.",
+    "lock_warning": "AUX waarschuwt dat meer mislukte inlogpogingen dit account kunnen blokkeren. Automatisch inloggen is gestopt. Wacht minstens 10 minuten zonder inlogpogingen, controleer je gegevens en kies daarna Repareren. Gebruik een apart AUX-gastaccount voor Homey als je ook de telefoonapp gebruikt.",
+    "login_failed": "Automatisch inloggen is gepauzeerd na een aanmeldprobleem bij AUX. Controleer je account en meld je opnieuw aan via Repareren in de apparaatinstellingen. Gebruik een apart AUX-gastaccount voor Homey als je ook AC Freedom/AUX Home gebruikt.",
+    "enter_credentials": "Vul het e-mailadres en wachtwoord van je AUX-account in.",
+    "device_not_shared": "Deze airco is niet zichtbaar voor dit AUX-account. Deel hem met je AUX-gastaccount in AC Freedom/AUX Home, accepteer zo nodig de uitnodiging en probeer opnieuw. Je opgeslagen apparaat is niet vervangen.",
+    "no_devices": "Geen airco's gevonden. Stel je airco eerst in via AC Freedom/AUX Home en deel hem met je AUX-gastaccount. Oudere modellen en cloudaccounts werken mogelijk niet met deze Homey-app.",
+    "unreachable": "De AUX-cloud is niet bereikbaar of de airco kan niet worden uitgelezen. Homey probeert het automatisch opnieuw.",
+    "repairing": "Bezig met opnieuw aanmelden. Wacht tot het repareren klaar is."
+  },
+  "account": {
+    "title": "Voordat je inlogt",
+    "compatibility": "Je airco moet al werken in AC Freedom of AUX Home. Getest met één AUX Freedom 5,0 kW; andere modellen en oudere accounts werken mogelijk niet. Een internetverbinding is vereist.",
+    "guest_title": "Gebruik een apart AUX-gastaccount",
+    "guest": "Wil je Homey en de telefoonapp tegelijk gebruiken? Maak een tweede AUX-account met een eigen e-mailadres en wachtwoord. Deel je airco daarmee via AC Freedom/AUX Home en accepteer zo nodig de uitnodiging. Controleer of het gastaccount de airco kan zien.",
+    "signin": "Log in Homey in met het AUX-gastaccount. Gebruik je hoofdaccount in de telefoonapp: hetzelfde account in beide apps kan Homey uitloggen. Dit is een AUX-account, geen gastgebruiker in Homey.",
+    "repair": "Airco al toegevoegd? Opnieuw aanmelden via Repareren behoudt je apparaat en Flows. Wacht na een accountblokkering of waarschuwing daarvoor minstens 10 minuten zonder inlogpogingen voordat je doorgaat."
+  }
+}

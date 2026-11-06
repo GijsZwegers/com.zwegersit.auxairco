@@ -45,23 +45,43 @@ things aren't fully solved yet:
   app) with an **email address set** — phone-only accounts can't log in here.
   Add an email via the AC Freedom/AUX Home app first if needed.
 
-**Tip: use a dedicated or shared account for Homey, not the one on your
-personal phone.** Logging into the AC Freedom/AUX Home app invalidates the
-previous session for that account. One account is all Homey needs to both
-read status and send commands, so a household/shared login works great —
-just be aware that if a phone is *actively* using that same account at the
-same time, Homey will need to silently re-authenticate more often, causing
-brief delays. A login used mainly (or only) by Homey avoids that entirely.
+**Use a separate AUX guest account for Homey if you also use the phone app.**
+Create a second AUX account with its own email address and password. Share
+the air conditioner from your main account with that guest account in
+AC Freedom/AUX Home, accept the invitation if required, and verify that
+the guest can see the air conditioner. Use the guest credentials in Homey
+and keep the main account in the phone app. These are two AUX accounts,
+not Homey users. Using the same account in both apps can invalidate
+Homey's session. Sharing options may vary between app versions/accounts.
 
 ## Adding a device
 
 1. Add a device, choose **AUX Airco**.
-2. Enter your AUX Cloud email and password.
+2. Read the compatibility and guest-account instructions, then enter your
+   AUX guest account's email and password.
 3. Select your air conditioner from the list.
 
-Note: logging into the AC Freedom/AUX Home app on a phone can invalidate
-Homey's active session. If Homey loses its connection, it will automatically
-log in again.
+## Login problems and repairing
+
+Homey stops automatic login attempts after rejected credentials, a lockout
+warning, or a locked account. The device shows an actionable message and
+Homey creates one timeline notification per account incident. The pause
+survives app restarts and is shared by devices using the same cloud account.
+Flows and manual controls cannot bypass it.
+
+For a lockout or warning, wait at least ten minutes without login attempts.
+Check the account in AC Freedom/AUX Home, then open the air conditioner's
+settings in Homey and choose its repair option to sign in again. Waiting
+alone does not resume automatic login attempts. Repair checks that the
+account can access the existing air conditioner before saving credentials,
+so the device ID and its Flows are preserved. A password update also updates
+other devices using the same account; switching to a different guest
+account changes only the repaired device.
+
+Temporary network/server errors are retried on the next status poll without
+an extra password login. Recognized expired-session errors permit one
+re-authentication and request retry. Devices on the same account share a
+session and in-flight login, avoiding competing logins.
 
 ## Credits & how this works
 

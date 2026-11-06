@@ -1,73 +1,107 @@
 import Homey from 'homey';
-import { login, listDevices } from '../../lib/auxcloud/client';
+import { listDevices, AuxLoginResult } from '../../lib/auxcloud/client';
 import { getCountryFromTimezone } from '../../lib/auxcloud/constants';
-import { login as legacyLogin, listDevices as legacyListDevices, LegacyAuxLoginResult } from '../../lib/auxcloud/legacyClient';
-import { LEGACY_REGIONS, LegacyRegion } from '../../lib/auxcloud/legacyConstants';
+import { listDevices as legacyListDevices, LegacyAuxLoginResult } from '../../lib/auxcloud/legacyClient';
+import { LEGACY_REGIONS } from '../../lib/auxcloud/legacyConstants';
+import {
+  getAuthManager, AuthPausedError, Credentials, accountKey,
+} from '../../lib/auxcloud/auth';
+import AircoDevice = require('./device');
 
 module.exports = class AircoDriver extends Homey.Driver {
 
-  async onPair(session: any) {
-    let bearer = '';
-    let email = '';
-    let password = '';
-    let country = '';
-    let protocol: 'new' | 'legacy' = 'new';
-    let legacySession: LegacyAuxLoginResult | null = null;
-    let legacyRegion: LegacyRegion | null = null;
+  async onPair(session: Homey.Driver.PairSession) {
+    let credentials: Credentials | null = null;
+    let loginTask: Promise<boolean> | null = null;
+    const auth = getAuthManager(this.homey);
 
     session.setHandler('login', async (data: { username: string; password: string }) => {
-      email = data.username;
-      password = data.password;
-
-      const timezone = await this.homey.clock.getTimezone();
-      country = getCountryFromTimezone(timezone);
-
-      // Try the current backend first -- this is what works for the
-      // overwhelming majority of accounts, so this stays a single request
-      // for anyone already on it. Only accounts that don't exist there
-      // (older AUX units, e.g. reported for a Q-Smart Plus) fall through to
-      // the legacy Broadlink-hosted backend, tried across all 3 of its
-      // regions since there's no way to know which one an account is on
-      // ahead of time.
-      try {
-        const result = await login(email, password, country);
-        bearer = result.token;
-        protocol = 'new';
-        return true;
-      } catch (err) {
-        // Fall through to the legacy backend below.
-      }
-
-      for (const region of LEGACY_REGIONS) {
+      if (loginTask) return loginTask;
+      credentials = null;
+      loginTask = (async () => {
+        const country = getCountryFromTimezone(await this.homey.clock.getTimezone());
+        const candidate: Credentials = {
+          email: data.username.trim(), password: data.password, country, protocol: 'new',
+        };
+        if (!candidate.email || !candidate.password) throw new Error(this.homey.__('auth.enter_credentials'));
         try {
-          legacySession = await legacyLogin(email, password, region);
-          legacyRegion = region;
-          protocol = 'legacy';
+          await auth.authenticate(candidate, true);
+          credentials = candidate;
           return true;
-        } catch (err) {
-          // Try the next region.
+        } catch (error) {
+          // Older accounts may be reported as unknown on the current backend.
+          // Never try other backends after a lockout, warning, or network error.
+          if (!(error instanceof AuthPausedError) || error.reason !== 'invalid_credentials') throw error;
         }
-      }
 
-      throw new Error('Login failed on both the current and legacy AUX Cloud backends. Double-check your email and password.');
+        for (const region of LEGACY_REGIONS) {
+          const legacy: Credentials = { ...candidate, protocol: 'legacy', region };
+          try {
+            await auth.authenticate(legacy, true);
+            credentials = legacy;
+            return true;
+          } catch (error) {
+            if (!(error instanceof AuthPausedError) || error.reason === 'locked' || error.reason === 'lock_warning') throw error;
+          }
+        }
+        throw new Error(this.homey.__('auth.invalid_credentials'));
+      })();
+      try {
+        return await loginTask;
+      } finally {
+        loginTask = null;
+      }
     });
 
     session.setHandler('list_devices', async () => {
-      if (protocol === 'new') {
-        const devices = await listDevices(bearer, country);
-        return devices.map((device) => ({
-          name: device.alias || 'AUX Airco',
-          data: { id: device.deviceId },
-          store: { mac: device.mac, email, password, protocol: 'new', country },
+      if (!credentials) throw new Error(this.homey.__('auth.enter_credentials'));
+      const verified = credentials;
+      const devices = await auth.run(verified, async (cloudSession) => {
+        if (verified.protocol === 'new') {
+          const bearer = (cloudSession as AuxLoginResult).token;
+          return (await listDevices(bearer, verified.country)).map((device) => ({
+            name: device.alias || 'AUX Airco',
+            data: { id: device.deviceId },
+            store: { ...verified, mac: device.mac, bearer },
+          }));
+        }
+        const legacySession = cloudSession as LegacyAuxLoginResult;
+        return (await legacyListDevices(legacySession, verified.region!)).map((device) => ({
+          name: device.friendlyName || 'AUX Airco',
+          data: { id: device.endpointId },
+          store: { ...verified, mac: device.mac ?? '', legacySession },
         }));
-      }
+      });
+      if (!devices.length) throw new Error(this.homey.__('auth.no_devices'));
+      return devices;
+    });
+  }
 
-      const devices = await legacyListDevices(legacySession as LegacyAuxLoginResult, legacyRegion as LegacyRegion);
-      return devices.map((device) => ({
-        name: device.friendlyName || 'AUX Airco',
-        data: { id: device.endpointId },
-        store: { mac: device.mac ?? '', email, password, protocol: 'legacy', region: legacyRegion },
-      }));
+  async onRepair(session: Homey.Driver.PairSession, device: AircoDevice) {
+    let repairTask: Promise<boolean> | null = null;
+    session.setHandler('login', async (data: { username: string; password: string }) => {
+      if (repairTask) return repairTask;
+      repairTask = (async () => {
+        if (!data.username.trim() || !data.password) throw new Error(this.homey.__('auth.enter_credentials'));
+        const previous = device.getCredentials();
+        await device.repairCredentials(data.username, data.password);
+        const credentials = device.getCredentials();
+        // A password update applies to all devices using this account. Switching
+        // to a different guest account only changes the selected device.
+        if (accountKey(previous) === accountKey(credentials)) {
+          for (const other of this.getDevices() as AircoDevice[]) {
+            if (other !== device && accountKey(other.getCredentials()) === accountKey(previous)) {
+              await other.applyCredentials(credentials);
+            }
+          }
+        }
+        return true;
+      })();
+      try {
+        return await repairTask;
+      } finally {
+        repairTask = null;
+      }
     });
   }
 
